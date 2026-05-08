@@ -1,27 +1,27 @@
 PREFIX ?= $(HOME)/.local
 BIN_DIR := $(PREFIX)/bin
-BIN := $(BIN_DIR)/curpop
-SRC := curpop.swift
+BIN := $(BIN_DIR)/curink
+SRC := curink.swift
 
 .PHONY: all build install uninstall clean run
 
 all: build
 
-build: curpop
+build: curink
 
-curpop: $(SRC)
-	swiftc -O $(SRC) -o curpop
+curink: $(SRC)
+	swiftc -O $(SRC) -o curink
 
 install: build
 	install -d $(BIN_DIR)
-	install -m 0755 curpop $(BIN)
+	install -m 0755 curink $(BIN)
 	@echo "Installed: $(BIN)"
 
 uninstall:
 	rm -f $(BIN)
 
 run: build
-	./curpop
+	./curink
 
 clean:
-	rm -f curpop
+	rm -f curink
