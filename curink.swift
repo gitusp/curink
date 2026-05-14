@@ -39,6 +39,7 @@ func printHelp() {
       --color <hex>     Ink color in #RRGGBB or #RRGGBBAA (default: #40E0D0).
       --width <pt>      Base line width in points (default: 4).
       --glow <pt>       Glow blur radius in points (default: width * 2; 0 disables).
+      --idle <sec>      Exit after this many idle seconds (default: 300; 0 disables).
       -h, --help        Show this help and exit.
     """)
 }
@@ -133,6 +134,7 @@ if CommandLine.arguments.count >= 2 {
 var accentColor = parseHexColor("#40E0D0") ?? NSColor.cyan
 var lineBaseWidth: CGFloat = 4
 var glowRadiusOverride: CGFloat? = nil
+var idleTimeout: TimeInterval = 300
 var argIter = CommandLine.arguments.dropFirst().makeIterator()
 while let arg = argIter.next() {
     switch arg {
@@ -145,6 +147,8 @@ while let arg = argIter.next() {
         if let v = argIter.next(), let n = Double(v), n > 0 { lineBaseWidth = CGFloat(n) }
     case "--glow":
         if let v = argIter.next(), let n = Double(v), n >= 0 { glowRadiusOverride = CGFloat(n) }
+    case "--idle":
+        if let v = argIter.next(), let n = Double(v), n >= 0 { idleTimeout = n }
     default:
         break
     }
@@ -232,6 +236,22 @@ var path = CGMutablePath()
 var lastPoint: CGPoint? = nil
 var pollTimer: Timer? = nil
 var isDrawing = false
+var idleTimer: Timer? = nil
+
+func cancelIdleExit() {
+    idleTimer?.invalidate()
+    idleTimer = nil
+}
+
+func scheduleIdleExit() {
+    cancelIdleExit()
+    if idleTimeout <= 0 { return }
+    let t = Timer(timeInterval: idleTimeout, repeats: false) { _ in
+        exit(0)
+    }
+    RunLoop.main.add(t, forMode: .common)
+    idleTimer = t
+}
 
 func mouseInView() -> CGPoint {
     let m = NSEvent.mouseLocation
@@ -326,12 +346,15 @@ DispatchQueue.global(qos: .userInteractive).async {
         let s = String(bytes: buf[0..<n], encoding: .utf8) ?? ""
         DispatchQueue.main.async {
             if s.hasPrefix("start") {
+                cancelIdleExit()
                 startDrawing()
             } else if s.hasPrefix("stop") {
                 stopDrawing()
+                scheduleIdleExit()
             }
         }
     }
 }
 
+scheduleIdleExit()
 app.run()
